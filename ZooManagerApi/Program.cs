@@ -5,6 +5,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- CONFIGURAÇÃO (ANTES DO BUILD) ---
 
+// Configuração do CORS para permitir requisições de qualquer origem
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // 1. Adicionar Controllers
 builder.Services.AddControllers();
 
@@ -30,6 +41,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
 
 app.UseAuthorization();
 
