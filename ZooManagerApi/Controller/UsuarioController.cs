@@ -37,28 +37,6 @@ public class UsuarioController : ControllerBase
         return usuario;
     }
 
-    // POST: api/Usuario/login
-    [HttpPost("login")]
-    public async Task<ActionResult<Usuario>> Login([FromBody] Usuario loginRequest)
-    {
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email == loginRequest.Email);
-
-        if (usuario == null)
-        {
-            return Unauthorized("Usuário ou senha inválidos.");
-        }
-
-        bool senhaValida = BCrypt.Net.BCrypt.Verify(loginRequest.Senha, usuario.Senha);
-
-        if (!senhaValida)
-        {
-            return Unauthorized("Usuário ou senha inválidos.");
-        }
-
-        usuario.Senha = ""; 
-        return Ok(usuario);
-    }
 
     // POST: api/Usuario
     [HttpPost]
