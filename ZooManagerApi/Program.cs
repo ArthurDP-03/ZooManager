@@ -3,14 +3,24 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using ZooManagerApi.Configuration;
 using ZooManagerApi.Data;
+using ZooManagerApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- SERVIÇOS ---
+
+// 1. Banco de Dados
 builder.Services.AddDbContext<ZooContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
+// 2. Carrega todas as nossas classes (Services, Repos, Configs)
+builder.Services.AddApplicationServices(builder.Configuration);
+
+// 3. Configuração do JWT
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+var key = Encoding.ASCII.GetBytes(jwtSettings.Key);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -19,37 +29,24 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; 
+    options.RequireHttpsMetadata = false;
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true, 
+        ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false, 
-        ValidateAudience = false 
+        ValidateIssuer = false,
+        ValidateAudience = false
     };
 });
 
-// --- 3. SERVIÇOS PADRÃO (CONTROLLERS & CORS) ---
 builder.Services.AddControllers();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
-// --- 4. CONFIGURAÇÃO DO SWAGGER (COM SUPORTE A JWT) 
 builder.Services.AddEndpointsApiExplorer();
+
+// 4. Swagger com cadeado
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "ZooManagerApi", Version = "v1" });
-
-    // Adiciona a definição de segurança (Botão Authorize)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme() 
     { 
         Name = "Authorization", 
@@ -59,18 +56,12 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header, 
         Description = "Insira o token JWT desta maneira: Bearer {seu token}" 
     }); 
-
-    // Adiciona a exigência de segurança para as rotas
     c.AddSecurityRequirement(new OpenApiSecurityRequirement 
     { 
         { 
               new OpenApiSecurityScheme 
               { 
-                  Reference = new OpenApiReference 
-                  { 
-                      Type = ReferenceType.SecurityScheme, 
-                      Id = "Bearer" 
-                  } 
+                  Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } 
               }, 
               new string[] {} 
         } 
@@ -79,7 +70,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// --- PIPELINE (ORDEM DE EXECUÇÃO) ---
+// --- PIPELINE ---
 
 if (app.Environment.IsDevelopment())
 {
@@ -88,11 +79,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
-app.UseCors("AllowAll");
-
-// ⭐ ATENÇÃO À ORDEM: Authentication ANTES de Authorization
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
