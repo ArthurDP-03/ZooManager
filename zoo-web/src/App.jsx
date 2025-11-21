@@ -1,42 +1,33 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
-import Cadastro from './pages/Cadastro';
+import Cadastro from './pages/Register'; // Mudei o nome do arquivo para Register.jsx para seguir o padrão
 import Animais from './pages/Animais';
-import Cuidados from './pages/Cuidados';
-import ProtectedRoute from './components/ProtectedRoute'; // <--- Importe o Guarda-Costas
+import AnimalDetalhes from './pages/AnimalDetalhes';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function Layout() {
   const location = useLocation();
-  const hideMenu = location.pathname === '/' || location.pathname === '/cadastro';
+  const hideMenu = location.pathname === '/' || location.pathname === '/register';
 
   return (
     <>
       {!hideMenu && <Navbar />}
-      <Routes>
-        {/* Rotas Públicas (Qualquer um entra) */}
-        <Route path="/" element={<Login />} />
-        <Route path="/cadastro" element={<Cadastro />} />
+      <div style={{ paddingBottom: '50px' }}> {/* Espaço rodapé */}
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Cadastro />} />
 
-        {/* Rotas Protegidas (Só com Token) */}
-        <Route 
-          path="/animais" 
-          element={
-            <ProtectedRoute>
-              <Animais />
-            </ProtectedRoute>
-          } 
-        />
-        
-        <Route 
-          path="/cuidados" 
-          element={
-            <ProtectedRoute>
-              <Cuidados />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+          <Route path="/animais" element={
+            <ProtectedRoute><Animais /></ProtectedRoute>
+          } />
+          
+          {/* NOVA ROTA DE DETALHES */}
+          <Route path="/animais/:id" element={
+            <ProtectedRoute><AnimalDetalhes /></ProtectedRoute>
+          } />
+        </Routes>
+      </div>
     </>
   );
 }

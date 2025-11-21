@@ -1,45 +1,54 @@
 import { useState } from 'react';
-import api from '../services/api';
-import { Container, TextField, Button, Typography, Box, Paper } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../services/api';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      // Chama o endpoint de Login
-      const response = await api.post('/Auth/login', { email, senha });
-      
-      // ⭐ SALVA O TOKEN E OS DADOS ⭐
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('usuarioId', response.data.id);
-      localStorage.setItem('usuarioNome', response.data.nome);
-
-      navigate('/animais'); // Vai para a área logada
+      const res = await api.post('/Auth/login', { email, senha });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('usuarioId', res.data.id);
+      navigate('/animais');
     } catch (error) {
-      alert('Email ou senha inválidos!');
+      alert('Erro no login: Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="xs">
-      <Paper elevation={3} sx={{ padding: 4, marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>🦁 ZooManager</Typography>
-        <Typography variant="h6">Login</Typography>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1 style={{ color: 'var(--jungle-dark)', marginBottom: '20px' }}>🦁 ZooManager</h1>
+        <h3 style={{ color: '#666', marginBottom: '20px' }}>Bem-vindo de volta</h3>
         
-        <Box component="form" onSubmit={handleLogin} sx={{ mt: 2, width: '100%' }}>
-          <TextField label="E-mail" type="email" fullWidth margin="normal" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label="Senha" type="password" fullWidth margin="normal" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        <form onSubmit={handleLogin}>
+          <input 
+            type="email" placeholder="Seu E-mail" className="input-field"
+            value={email} onChange={e => setEmail(e.target.value)} required 
+          />
+          <input 
+            type="password" placeholder="Sua Senha" className="input-field"
+            value={senha} onChange={e => setSenha(e.target.value)} required 
+          />
           
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>Entrar</Button>
-          <Button component={Link} to="/cadastro" fullWidth color="inherit">Criar conta</Button>
-        </Box>
-      </Paper>
-    </Container>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }} disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar na Selva'}
+          </button>
+        </form>
+        
+        <p style={{ marginTop: '15px', fontSize: '0.9rem' }}>
+          Não tem conta? <Link to="/register" style={{ color: 'var(--jungle-mid)' }}>Cadastre-se</Link>
+        </p>
+      </div>
+    </div>
   );
 }
 

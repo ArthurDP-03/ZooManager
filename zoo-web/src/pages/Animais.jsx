@@ -1,155 +1,128 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
-import { 
-  Container, Typography, Button, Card, CardContent, CardActions, 
-  Grid, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
-  Chip, MenuItem 
-} from '@mui/material';
+import { Link } from 'react-router-dom';
+import { getAnimais, getEspecies, getHabitats, createAnimal } from '../services/dataService';
+import Modal from '../components/Modal';
 
 function Animais() {
+  // Dados
   const [animais, setAnimais] = useState([]);
-  const [open, setOpen] = useState(false); 
-
-  // Listas de apoio (Catálogo)
-  const [listaEspecies, setListaEspecies] = useState([]);
-  const [listaHabitats, setListaHabitats] = useState([]);
-
-  // Form States
-  const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [especieId, setEspecieId] = useState(''); // Guarda o ID numérico
-  const [habitatId, setHabitatId] = useState(''); // Guarda o ID numérico
-  const [paisOrigem, setPaisOrigem] = useState('');
-
-  const usuarioId = localStorage.getItem('usuarioId'); 
-
-  const loadData = async () => {
-    try {
-        // Carrega tudo em paralelo
-        const [resAnimais, resEspecies, resHabitats] = await Promise.all([
-            api.get('/Animal'),
-            api.get('/Catalogos/especies'),
-            api.get('/Catalogos/habitats')
-        ]);
-        setAnimais(resAnimais.data);
-        setListaEspecies(resEspecies.data);
-        setListaHabitats(resHabitats.data);
-    } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-    }
-  };
+  const [especies, setEspecies] = useState([]);
+  const [habitats, setHabitats] = useState([]);
+  
+  // Filtros
+  const [filtro, setFiltro] = useState({ nome: '', especie: '', habitat: '' });
+  
+  // Modal
+  const [showModal, setShowModal] = useState(false);
+  const [novoAnimal, setNovoAnimal] = useState({ nome: '', descricao: '', especieId: '', habitatId: '', paisOrigem: '', dataNascimento: '' });
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleCadastro = async () => {
-    const novoAnimal = {
-      nome,
-      descricao,
-      especieId: parseInt(especieId), // Envia ID
-      habitatId: parseInt(habitatId), // Envia ID
-      paisOrigem,
-      usuarioId: parseInt(usuarioId) 
-    };
-
-    try {
-      await api.post('/Animal', novoAnimal);
-      alert('Animal salvo!');
-      setOpen(false);
-      loadData();
-      // Limpa
-      setNome(''); setDescricao(''); setEspecieId(''); setHabitatId(''); setPaisOrigem('');
-    } catch (error) {
-      alert('Erro ao salvar.');
-    }
+  const loadData = async () => {
+    const [resAnimais, resEspecies, resHabitats] = await Promise.all([
+      getAnimais(), getEspecies(), getHabitats()
+    ]);
+    setAnimais(resAnimais.data);
+    setEspecies(resEspecies.data);
+    setHabitats(resHabitats.data);
   };
 
-  const handleDelete = async (id) => {
-    if (confirm("Excluir animal?")) {
-      await api.delete(`/Animal/${id}`);
+  // Lógica de Filtro (Client-Side)
+  const animaisFiltrados = animais.filter(animal => {
+    const matchNome = animal.nome.toLowerCase().includes(filtro.nome.toLowerCase());
+    const matchEspecie = filtro.especie ? animal.especie === filtro.especie : true; // Ajuste se o DTO retornar ID ou Nome
+    const matchHabitat = filtro.habitat ? animal.habitat === filtro.habitat : true;
+    return matchNome && matchEspecie && matchHabitat;
+  });
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      await createAnimal({
+        ...novoAnimal,
+        usuarioId: parseInt(localStorage.getItem('usuarioId')),
+        dataNascimento: novoAnimal.dataNascimento || null
+      });
+      alert('Animal cadastrado!');
+      setShowModal(false);
       loadData();
+    } catch (error) {
+      alert('Erro ao criar animal');
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-        <Typography variant="h4">🐾 Meus Animais</Typography>
-        <Button variant="contained" color="success" onClick={() => setOpen(true)}>+ Novo Animal</Button>
-      </Grid>
+    <div className="container">
+      {/* Header e Filtros */}
+      <div className="card" style={{ marginBottom: '30px', borderLeft: '5px solid var(--jungle-mid)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ color: 'var(--jungle-dark)' }}>🦁 Catálogo da Selva</h2>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Novo Animal</button>
+        </div>
 
-      <Grid container spacing={3}>
-        {animais.map((animal) => (
-          <Grid item xs={12} sm={6} md={4} key={animal.id}>
-            <Card elevation={3}>
-              <CardContent>
-                <Typography variant="h5">{animal.nome}</Typography>
-                
-                {/* Exibe o Nome vindo do ResponseDto */}
-                <Typography variant="subtitle1" color="text.primary">
-                    {animal.especie}
-                </Typography>
-                
-                <Chip label={animal.habitat} color="primary" size="small" variant="outlined" sx={{ mr: 1, mt: 1 }} />
-                <Chip label={animal.paisOrigem} color="warning" size="small" variant="outlined" sx={{ mt: 1 }} />
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <input 
+            placeholder="Buscar por nome..." className="input-field" style={{flex: 2}}
+            value={filtro.nome} onChange={e => setFiltro({...filtro, nome: e.target.value})}
+          />
+          <select className="input-field" style={{flex: 1}} 
+            value={filtro.especie} onChange={e => setFiltro({...filtro, especie: e.target.value})}>
+            <option value="">Todas Espécies</option>
+            {especies.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
+          </select>
+          <select className="input-field" style={{flex: 1}}
+            value={filtro.habitat} onChange={e => setFiltro({...filtro, habitat: e.target.value})}>
+            <option value="">Todos Habitats</option>
+            {habitats.map(h => <option key={h.id} value={h.nome}>{h.nome}</option>)}
+          </select>
+        </div>
+      </div>
 
-                <Typography variant="body2" sx={{ mt: 2 }}>{animal.descricao}</Typography>
-              </CardContent>
-              <CardActions>
-                <Button size="small" color="error" onClick={() => handleDelete(animal.id)}>Excluir</Button>
-              </CardActions>
-            </Card>
-          </Grid>
+      {/* Grid de Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+        {animaisFiltrados.map(animal => (
+          <Link to={`/animais/${animal.id}`} key={animal.id} style={{ textDecoration: 'none' }}>
+            <div className="card" style={{ height: '100%', cursor: 'pointer' }}>
+              <div style={{ backgroundColor: 'var(--jungle-light)', height: '8px', borderRadius: '4px 4px 0 0', marginBottom: '10px' }}></div>
+              <h3 style={{ color: 'var(--jungle-dark)' }}>{animal.nome}</h3>
+              <p style={{ color: '#666', fontSize: '0.9rem', margin: '5px 0' }}>{animal.especie} • {animal.habitat}</p>
+              <div style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
+                <span style={{ background: '#e8f5e9', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', color: 'var(--jungle-dark)' }}>
+                  {animal.paisOrigem || 'Origem desc.'}
+                </span>
+              </div>
+            </div>
+          </Link>
         ))}
-      </Grid>
+      </div>
 
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Cadastrar Animal</DialogTitle>
-        <DialogContent>
-          <TextField margin="dense" label="Nome" fullWidth value={nome} onChange={e => setNome(e.target.value)} />
-          
-          {/* SELECT PARA ESPÉCIE */}
-          <TextField
-            select
-            margin="dense"
-            label="Espécie"
-            fullWidth
-            value={especieId}
-            onChange={(e) => setEspecieId(e.target.value)}
-          >
-            {listaEspecies.map((option) => (
-              <MenuItem key={option.id} value={option.id}>
-                {option.nome}
-              </MenuItem>
-            ))}
-          </TextField>
+      {/* Modal de Criação (Simples) */}
+      {showModal && (
+        <Modal onClose={() => setShowModal(false)} title="Novo Animal">
+          <form onSubmit={handleCreate}>
+            <input className="input-field" placeholder="Nome" onChange={e => setNovoAnimal({...novoAnimal, nome: e.target.value})} required />
+            
+            <select className="input-field" onChange={e => setNovoAnimal({...novoAnimal, especieId: e.target.value})} required>
+                <option value="">Selecione a Espécie</option>
+                {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+            </select>
 
-          {/* SELECT PARA HABITAT */}
-          <TextField
-            select
-            margin="dense"
-            label="Habitat"
-            fullWidth
-            value={habitatId}
-            onChange={(e) => setHabitatId(e.target.value)}
-          >
-            {listaHabitats.map((option) => (
-              <MenuItem key={option.id} value={option.id}>
-                {option.nome}
-              </MenuItem>
-            ))}
-          </TextField>
+            <select className="input-field" onChange={e => setNovoAnimal({...novoAnimal, habitatId: e.target.value})} required>
+                <option value="">Selecione o Habitat</option>
+                {habitats.map(h => <option key={h.id} value={h.id}>{h.nome}</option>)}
+            </select>
 
-          <TextField margin="dense" label="País de Origem" fullWidth value={paisOrigem} onChange={e => setPaisOrigem(e.target.value)} />
-          <TextField margin="dense" label="Descrição" fullWidth multiline rows={2} value={descricao} onChange={e => setDescricao(e.target.value)} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleCadastro} variant="contained">Salvar</Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+            <input className="input-field" placeholder="País de Origem" onChange={e => setNovoAnimal({...novoAnimal, paisOrigem: e.target.value})} />
+            <input className="input-field" type="date" onChange={e => setNovoAnimal({...novoAnimal, dataNascimento: e.target.value})} />
+            <textarea className="input-field" placeholder="Descrição" rows="3" onChange={e => setNovoAnimal({...novoAnimal, descricao: e.target.value})} />
+            
+            <button type="submit" className="btn btn-primary" style={{width: '100%', marginTop: '10px'}}>Salvar</button>
+          </form>
+        </Modal>
+      )}
+    </div>
   );
 }
 
