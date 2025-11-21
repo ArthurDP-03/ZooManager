@@ -12,13 +12,20 @@ public class AnimalRepository : IAnimalRepository
 
     public async Task<IEnumerable<Animal>> GetAllAsync()
     {
-        // Include Usuario para pegar o nome do dono
-        return await _context.Animais.Include(a => a.Usuario).ToListAsync();
+        return await _context.Animais
+            .Include(a => a.Usuario) // Traz o Dono
+            .Include(a => a.Especie) // Traz a Espécie
+            .Include(a => a.Habitat) // Traz o Habitat
+            .ToListAsync();
     }
 
     public async Task<Animal?> GetByIdAsync(int id)
     {
-        return await _context.Animais.Include(a => a.Usuario).FirstOrDefaultAsync(x => x.Id == id);
+        return await _context.Animais
+            .Include(a => a.Usuario)
+            .Include(a => a.Especie)
+            .Include(a => a.Habitat)
+            .FirstOrDefaultAsync(x => x.Id == id);
     }
 
     public async Task<Animal> CreateAsync(Animal animal)

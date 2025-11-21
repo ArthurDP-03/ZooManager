@@ -30,24 +30,30 @@ public class AnimalService : IAnimalService
 
     public async Task<AnimalResponseDto> CreateAsync(AnimalDto dto)
     {
+        // 1. Valida se o dono existe
         var dono = await _usuarioRepo.GetByIdAsync(dto.UsuarioId);
         if (dono == null) throw new Exception("Usuário dono não encontrado.");
 
+        // 2. Cria a entidade mapeando os IDs
         var animal = new Animal
         {
             Nome = dto.Nome,
             Descricao = dto.Descricao,
             DataNascimento = dto.DataNascimento,
-            Habitat = dto.Habitat,
             PaisOrigem = dto.PaisOrigem,
-            UsuarioId = dto.UsuarioId
+            UsuarioId = dto.UsuarioId,
+            EspecieId = dto.EspecieId, // ID vindo do Select no Front
+            HabitatId = dto.HabitatId  // ID vindo do Select no Front
         };
 
+        // 3. Salva no banco
         var criado = await _animalRepo.CreateAsync(animal);
         
-        // Recarrega para garantir que temos os dados do dono preenchidos se necessário
-        criado.Usuario = dono;
-        return MapToDto(criado);
+        // 4. Busca o animal completo (com Includes) para retornar os nomes corretos no DTO
+        // (Sem isso, o retorno teria "Especie: null" na primeira resposta)
+        var animalCompleto = await _animalRepo.GetByIdAsync(criado.Id);
+
+        return MapToDto(animalCompleto ?? criado);
     }
 
     public async Task UpdateAsync(int id, AnimalDto dto)
@@ -55,11 +61,15 @@ public class AnimalService : IAnimalService
         var animal = await _animalRepo.GetByIdAsync(id);
         if (animal == null) throw new Exception("Animal não encontrado");
 
+        // Atualiza os campos
         animal.Nome = dto.Nome;
         animal.Descricao = dto.Descricao;
         animal.DataNascimento = dto.DataNascimento;
-        animal.Habitat = dto.Habitat;
         animal.PaisOrigem = dto.PaisOrigem;
+        
+        // Atualiza as FKs
+        animal.EspecieId = dto.EspecieId;
+        animal.HabitatId = dto.HabitatId;
 
         await _animalRepo.UpdateAsync(animal);
     }
@@ -78,8 +88,15 @@ public class AnimalService : IAnimalService
             Nome = a.Nome ?? "",
             Descricao = a.Descricao,
             DataNascimento = a.DataNascimento,
-            Habitat = a.Habitat,
             PaisOrigem = a.PaisOrigem,
+            
+            // Mapeia os nomes para exibição
+            Especie = a.Especie?.Nome ?? "Não definida",
+            EspecieId = a.EspecieId,
+            
+            Habitat = a.Habitat?.Nome ?? "Não definido",
+            HabitatId = a.HabitatId,
+
             NomeDono = a.Usuario?.Nome ?? "Sem Dono"
         };
     }

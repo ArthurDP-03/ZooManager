@@ -11,23 +11,29 @@ public class Animal
     [MaxLength(50)]
     public string? Nome { get; set; }
 
-    public string? Descricao { get; set; } // Text no SQL
-
+    public string? Descricao { get; set; }
     public DateTime? DataNascimento { get; set; }
 
-    [MaxLength(50)]
-    public string? Habitat { get; set; }
+    // --- RELACIONAMENTOS ---
+    
+    public int EspecieId { get; set; }
+    [ForeignKey("EspecieId")]
+    [JsonIgnore]
+    public Especie? Especie { get; set; }
+
+    public int HabitatId { get; set; }
+    [ForeignKey("HabitatId")]
+    [JsonIgnore]
+    public Habitat? Habitat { get; set; }
 
     [MaxLength(50)]
     public string? PaisOrigem { get; set; }
 
     public int UsuarioId { get; set; }
-
     [JsonIgnore]
     [ForeignKey("UsuarioId")]
     public Usuario? Usuario { get; set; }
 
     [JsonIgnore]
     public ICollection<Cuidado>? Cuidados { get; set; }
-
 }
