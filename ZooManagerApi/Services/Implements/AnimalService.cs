@@ -16,25 +16,29 @@ public class AnimalService : IAnimalService
         _usuarioRepo = usuarioRepo;
     }
 
-    public async Task<IEnumerable<AnimalResponseDto>> GetAllAsync()
+    public async Task<IEnumerable<AnimalResponseDto>> GetAllAsync(int userId)
     {
-        var animais = await _animalRepo.GetAllAsync();
+        // Chama o método do repositório que filtra por User ID
+        // (Certifique-se de ter adicionado o GetAllByUserIdAsync no Repository conforme passo anterior)
+        var animais = await _animalRepo.GetAllByUserIdAsync(userId);
         return animais.Select(MapToDto);
     }
 
-    public async Task<AnimalResponseDto?> GetByIdAsync(int id)
+    public async Task<AnimalResponseDto?> GetByIdAsync(int id, int userId)
     {
         var animal = await _animalRepo.GetByIdAsync(id);
-        return animal == null ? null : MapToDto(animal);
+        
+        if (animal == null || animal.UsuarioId != userId) 
+            return null;
+
+        return MapToDto(animal);
     }
 
     public async Task<AnimalResponseDto> CreateAsync(AnimalDto dto)
     {
-        // 1. Valida se o dono existe
         var dono = await _usuarioRepo.GetByIdAsync(dto.UsuarioId);
         if (dono == null) throw new Exception("Usuário dono não encontrado.");
 
-        // 2. Cria a entidade mapeando os IDs
         var animal = new Animal
         {
             Nome = dto.Nome,
@@ -42,42 +46,45 @@ public class AnimalService : IAnimalService
             DataNascimento = dto.DataNascimento,
             PaisOrigem = dto.PaisOrigem,
             UsuarioId = dto.UsuarioId,
-            EspecieId = dto.EspecieId, // ID vindo do Select no Front
-            HabitatId = dto.HabitatId  // ID vindo do Select no Front
+            EspecieId = dto.EspecieId,
+            HabitatId = dto.HabitatId
         };
 
-        // 3. Salva no banco
         var criado = await _animalRepo.CreateAsync(animal);
-        
-        // 4. Busca o animal completo (com Includes) para retornar os nomes corretos no DTO
-        // (Sem isso, o retorno teria "Especie: null" na primeira resposta)
         var animalCompleto = await _animalRepo.GetByIdAsync(criado.Id);
-
         return MapToDto(animalCompleto ?? criado);
     }
 
-    public async Task UpdateAsync(int id, AnimalDto dto)
+    public async Task UpdateAsync(int id, AnimalDto dto, int userId)
     {
         var animal = await _animalRepo.GetByIdAsync(id);
+        
         if (animal == null) throw new Exception("Animal não encontrado");
+        if (animal.UsuarioId != userId) 
+            throw new UnauthorizedAccessException("Você não tem permissão para editar este animal.");
 
-        // Atualiza os campos
+        // Atualiza dados
         animal.Nome = dto.Nome;
         animal.Descricao = dto.Descricao;
         animal.DataNascimento = dto.DataNascimento;
         animal.PaisOrigem = dto.PaisOrigem;
-        
-        // Atualiza as FKs
         animal.EspecieId = dto.EspecieId;
         animal.HabitatId = dto.HabitatId;
 
         await _animalRepo.UpdateAsync(animal);
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, int userId)
     {
         var animal = await _animalRepo.GetByIdAsync(id);
-        if (animal != null) await _animalRepo.DeleteAsync(animal);
+        
+        if (animal != null)
+        {
+            if (animal.UsuarioId != userId) 
+                throw new UnauthorizedAccessException("Você não tem permissão para excluir este animal.");
+
+            await _animalRepo.DeleteAsync(animal);
+        }
     }
 
     private static AnimalResponseDto MapToDto(Animal a)
@@ -89,15 +96,13 @@ public class AnimalService : IAnimalService
             Descricao = a.Descricao,
             DataNascimento = a.DataNascimento,
             PaisOrigem = a.PaisOrigem,
+            NomeDono = a.Usuario?.Nome ?? "Sem Dono",
             
-            // Mapeia os nomes para exibição
-            Especie = a.Especie?.Nome ?? "Não definida",
+            Especie = a.Especie?.Nome ?? "N/A",
             EspecieId = a.EspecieId,
             
-            Habitat = a.Habitat?.Nome ?? "Não definido",
-            HabitatId = a.HabitatId,
-
-            NomeDono = a.Usuario?.Nome ?? "Sem Dono"
+            Habitat = a.Habitat?.Nome ?? "N/A",
+            HabitatId = a.HabitatId
         };
     }
 }

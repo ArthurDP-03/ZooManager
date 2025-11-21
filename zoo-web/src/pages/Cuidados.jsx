@@ -1,45 +1,67 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
-import { Container, Typography, List, ListItem, ListItemText, Paper, Chip } from '@mui/material';
+import { getCuidados } from '../services/dataService';
 
 function Cuidados() {
   const [cuidados, setCuidados] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/Cuidado')
-      .then(response => setCuidados(response.data))
-      .catch(error => console.error("Erro:", error));
+    loadData();
   }, []);
 
+  const loadData = async () => {
+    try {
+      const response = await getCuidados();
+      setCuidados(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar cuidados", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>📋 Rotina de Cuidados</Typography>
-      
-      <Paper elevation={2}>
-        <List>
-          {cuidados.map((cuidado) => (
-            <ListItem key={cuidado.id} divider>
-              <ListItemText 
-                primary={cuidado.nome} 
-                secondary={
-                    <>
-                        <Typography component="span" variant="body2" color="text.primary">
-                            Frequência: {cuidado.frequencia}
-                        </Typography>
-                        <br />
-                        {cuidado.descricao}
-                    </>
-                }
-              />
-              {/* Mostra o nome do animal se ele vier da API */}
-              {cuidado.animal && (
-                  <Chip label={`Animal: ${cuidado.animal.nome}`} color="primary" variant="outlined" />
-              )}
-            </ListItem>
+    <div className="container">
+      <div className="card" style={{ borderLeft: '5px solid var(--jungle-mid)', marginBottom: '30px' }}>
+        <h2 style={{ color: 'var(--jungle-dark)', margin: 0 }}>🏥 Central de Veterinária</h2>
+        <p style={{ color: '#666', marginTop: '5px' }}>Visão geral de todos os tratamentos do zoológico</p>
+      </div>
+
+      {loading ? (
+        <p>Carregando prontuários...</p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          {cuidados.map((item) => (
+            <div key={item.id} className="card" style={{ position: 'relative' }}>
+              <div style={{ 
+                position: 'absolute', top: 15, right: 15, 
+                background: 'var(--sand)', color: 'var(--jungle-dark)', 
+                padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' 
+              }}>
+                {item.frequencia}
+              </div>
+              
+              <h3 style={{ color: 'var(--jungle-mid)', marginBottom: '5px' }}>{item.nome}</h3>
+              
+              {/* Exibe o nome do Animal se o DTO trouxer, senão avisa */}
+              <p style={{ fontWeight: 'bold', color: '#444', marginBottom: '10px' }}>
+                Paciente: {item.nomeAnimal || "Animal não identificado"}
+              </p>
+              
+              <p style={{ color: '#666', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                {item.descricao}
+              </p>
+            </div>
           ))}
-        </List>
-      </Paper>
-    </Container>
+        </div>
+      )}
+      
+      {cuidados.length === 0 && !loading && (
+        <p style={{ textAlign: 'center', color: '#888', marginTop: '40px' }}>
+          Nenhum registro de cuidado encontrado no sistema.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -1,42 +1,47 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext'; // <--- Importe
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
-import Cadastro from './pages/Register'; // Mudei o nome do arquivo para Register.jsx para seguir o padrão
+import Register from './pages/Register';
 import Animais from './pages/Animais';
 import AnimalDetalhes from './pages/AnimalDetalhes';
-import ProtectedRoute from './components/ProtectedRoute';
+import Cuidados from './pages/Cuidados';
 
-function Layout() {
-  const location = useLocation();
-  const hideMenu = location.pathname === '/' || location.pathname === '/register';
+const ProtectedLayout = () => {
+  const { user } = useAuth(); 
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <>
-      {!hideMenu && <Navbar />}
-      <div style={{ paddingBottom: '50px' }}> {/* Espaço rodapé */}
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/register" element={<Cadastro />} />
-
-          <Route path="/animais" element={
-            <ProtectedRoute><Animais /></ProtectedRoute>
-          } />
-          
-          {/* NOVA ROTA DE DETALHES */}
-          <Route path="/animais/:id" element={
-            <ProtectedRoute><AnimalDetalhes /></ProtectedRoute>
-          } />
-        </Routes>
+      <Navbar />
+      <div style={{ paddingBottom: '50px' }}>
+        <Outlet />
       </div>
     </>
   );
-}
+};
 
 function App() {
   return (
-    <BrowserRouter>
-      <Layout />
-    </BrowserRouter>
+    // <--- Envolve tudo com o Provider
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route element={<ProtectedLayout />}>
+            <Route path="/animais" element={<Animais />} />
+            <Route path="/animais/:id" element={<AnimalDetalhes />} />
+            <Route path="/cuidados" element={<Cuidados />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

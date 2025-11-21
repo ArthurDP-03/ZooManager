@@ -6,6 +6,7 @@ public interface IAnimalRepository
 {
     Task<IEnumerable<Animal>> GetAllAsync();
     Task<Animal?> GetByIdAsync(int id);
+    Task<IEnumerable<Animal>> GetAllByUserIdAsync(int userId);
     Task<Animal> CreateAsync(Animal animal);
     Task UpdateAsync(Animal animal);
     Task DeleteAsync(Animal animal);

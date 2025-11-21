@@ -7,6 +7,13 @@ namespace ZooManagerApi.Repositories.Implements;
 
 public class CuidadoRepository : ICuidadoRepository
 {
+    public async Task<IEnumerable<Cuidado>> GetAllByUserIdAsync(int userId)
+    {
+        return await _context.Cuidados
+            .Include(c => c.Animal) 
+            .Where(c => c.Animal!.UsuarioId == userId) 
+            .ToListAsync();
+    }
     private readonly ZooContext _context;
     public CuidadoRepository(ZooContext context) => _context = context;
 

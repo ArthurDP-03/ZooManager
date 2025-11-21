@@ -1,13 +1,12 @@
 using ZooManagerApi.DTOs;
-using ZooManagerApi.Models;
 
 namespace ZooManagerApi.Services.Interfaces;
 
 public interface ICuidadoService
 {
-    Task<IEnumerable<CuidadoResponseDto>> GetAllAsync();
-    Task<CuidadoResponseDto?> GetByIdAsync(int id);
-    Task<CuidadoResponseDto> CreateAsync(CuidadoDto dto);
-    Task UpdateAsync(int id, CuidadoDto dto);
-    Task DeleteAsync(int id);
+    Task<IEnumerable<CuidadoResponseDto>> GetAllAsync(int userId);
+    Task<CuidadoResponseDto?> GetByIdAsync(int id, int userId);
+    Task<CuidadoResponseDto> CreateAsync(CuidadoDto dto, int userId);
+    Task UpdateAsync(int id, CuidadoDto dto, int userId);
+    Task DeleteAsync(int id, int userId);
 }

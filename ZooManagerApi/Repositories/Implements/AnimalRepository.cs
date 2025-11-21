@@ -28,6 +28,16 @@ public class AnimalRepository : IAnimalRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<IEnumerable<Animal>> GetAllByUserIdAsync(int userId)
+    {
+        return await _context.Animais
+            .Where(a => a.UsuarioId == userId)
+            .Include(a => a.Usuario)
+            .Include(a => a.Especie)
+            .Include(a => a.Habitat)
+            .ToListAsync();
+    }
+
     public async Task<Animal> CreateAsync(Animal animal)
     {
         _context.Animais.Add(animal);

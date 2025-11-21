@@ -44,14 +44,20 @@ public class AuthService : IAuthService
     {
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Key);
         var tokenHandler = new JwtSecurityTokenHandler();
+        
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email)
+                new Claim(ClaimTypes.Email, usuario.Email),
+                // 🔥 ADIÇÃO DE SEGURANÇA: JTI (ID único do token)
+                // Isso garante que o hash final seja SEMPRE diferente, mesmo para o mesmo usuário
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                // 🔥 IAT (Issued At): Marca o momento exato da geração
+                new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(), ClaimValueTypes.Integer64)
             }),
-            Expires = DateTime.UtcNow.AddHours(8),
+            Expires = DateTime.UtcNow.AddHours(2), 
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
