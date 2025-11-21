@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZooManagerApi.Data;
@@ -8,6 +9,7 @@ namespace ZooManagerApi.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class CuidadoController : ControllerBase
 {
     private readonly ZooContext _context;

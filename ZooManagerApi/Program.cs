@@ -1,11 +1,38 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
 using ZooManagerApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- CONFIGURAÇÃO (ANTES DO BUILD) ---
+builder.Services.AddDbContext<ZooContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configuração do CORS para permitir requisições de qualquer origem
+var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false; 
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true, 
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false, 
+        ValidateAudience = false 
+    };
+});
+
+// --- 3. SERVIÇOS PADRÃO (CONTROLLERS & CORS) ---
+builder.Services.AddControllers();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -16,23 +43,43 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 1. Adicionar Controllers
-builder.Services.AddControllers();
-
-// 2. Adicionar Swagger/OpenAPI
+// --- 4. CONFIGURAÇÃO DO SWAGGER (COM SUPORTE A JWT) 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ZooManagerApi", Version = "v1" });
 
-// 3. ⭐ AQUI ESTÁ A MÁGICA DO BANCO ⭐
-// Registra o ZooContext usando a conexão que colocamos no appsettings.json
-builder.Services.AddDbContext<ZooContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    // Adiciona a definição de segurança (Botão Authorize)
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme() 
+    { 
+        Name = "Authorization", 
+        Type = SecuritySchemeType.ApiKey, 
+        Scheme = "Bearer", 
+        BearerFormat = "JWT", 
+        In = ParameterLocation.Header, 
+        Description = "Insira o token JWT desta maneira: Bearer {seu token}" 
+    }); 
 
-// --- FIM DA CONFIGURAÇÃO ---
+    // Adiciona a exigência de segurança para as rotas
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement 
+    { 
+        { 
+              new OpenApiSecurityScheme 
+              { 
+                  Reference = new OpenApiReference 
+                  { 
+                      Type = ReferenceType.SecurityScheme, 
+                      Id = "Bearer" 
+                  } 
+              }, 
+              new string[] {} 
+        } 
+    }); 
+});
 
 var app = builder.Build();
 
-// --- USO DO APP (DEPOIS DO BUILD) ---
+// --- PIPELINE (ORDEM DE EXECUÇÃO) ---
 
 if (app.Environment.IsDevelopment())
 {
@@ -44,6 +91,8 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
+// ⭐ ATENÇÃO À ORDEM: Authentication ANTES de Authorization
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();

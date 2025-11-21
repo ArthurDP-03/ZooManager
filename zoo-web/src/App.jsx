@@ -4,21 +4,38 @@ import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import Animais from './pages/Animais';
 import Cuidados from './pages/Cuidados';
+import ProtectedRoute from './components/ProtectedRoute'; // <--- Importe o Guarda-Costas
 
-// Componente para controlar onde o Menu aparece
 function Layout() {
   const location = useLocation();
-  // Esconde o menu se for login ou cadastro
   const hideMenu = location.pathname === '/' || location.pathname === '/cadastro';
 
   return (
     <>
       {!hideMenu && <Navbar />}
       <Routes>
+        {/* Rotas Públicas (Qualquer um entra) */}
         <Route path="/" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
-        <Route path="/animais" element={<Animais />} />
-        <Route path="/cuidados" element={<Cuidados />} />
+
+        {/* Rotas Protegidas (Só com Token) */}
+        <Route 
+          path="/animais" 
+          element={
+            <ProtectedRoute>
+              <Animais />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/cuidados" 
+          element={
+            <ProtectedRoute>
+              <Cuidados />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </>
   );

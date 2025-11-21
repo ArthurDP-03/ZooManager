@@ -11,10 +11,11 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Chama o novo endpoint que criamos no C#
-      const response = await api.post('/Usuario/login', { nome: "login", email, senha });
+      // Chama o endpoint de Login
+      const response = await api.post('/Auth/login', { email, senha });
       
-      // Salva o ID do usuário no navegador para usar depois
+      // ⭐ SALVA O TOKEN E OS DADOS ⭐
+      localStorage.setItem('token', response.data.token);
       localStorage.setItem('usuarioId', response.data.id);
       localStorage.setItem('usuarioNome', response.data.nome);
 
