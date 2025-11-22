@@ -12,9 +12,10 @@ function Animais() {
   // Filtros
   const [filtro, setFiltro] = useState({ nome: '', especie: '', habitat: '' });
   
-  // Modal
+  // Modais
   const [showModal, setShowModal] = useState(false);
-  // Nota: Iniciamos com strings vazias para os IDs
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // Novo estado para sucesso
+
   const [novoAnimal, setNovoAnimal] = useState({ 
     nome: '', 
     descricao: '', 
@@ -31,23 +32,19 @@ function Animais() {
   const loadData = async () => {
     try {
       const [resAnimais, resEspecies, resHabitats] = await Promise.all([
-        getAnimais(), 
-        getEspecies(), 
-        getHabitats()
+        getAnimais(), getEspecies(), getHabitats()
       ]);
       setAnimais(resAnimais.data);
       setEspecies(resEspecies.data);
       setHabitats(resHabitats.data);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("Erro ao carregar dados", error);
     }
   };
 
-  // Lógica de Filtro (Client-Side)
   const animaisFiltrados = animais.filter(animal => {
     const matchNome = animal.nome.toLowerCase().includes(filtro.nome.toLowerCase());
-    // Ajuste conforme o retorno do seu DTO (se for nome ou ID)
-    const matchEspecie = filtro.especie ? animal.especie === filtro.especie : true; 
+    const matchEspecie = filtro.especie ? animal.especie === filtro.especie : true;
     const matchHabitat = filtro.habitat ? animal.habitat === filtro.habitat : true;
     return matchNome && matchEspecie && matchHabitat;
   });
@@ -55,7 +52,6 @@ function Animais() {
   const handleCreate = async (e) => {
     e.preventDefault();
     
-    // 1. Validação básica
     if (!novoAnimal.especieId || !novoAnimal.habitatId) {
       alert("Por favor, selecione a Espécie e o Habitat.");
       return;
@@ -64,33 +60,25 @@ function Animais() {
     try {
       await createAnimal({
         ...novoAnimal,
-        // 2. CORREÇÃO: Converter IDs para Inteiro
         especieId: parseInt(novoAnimal.especieId),
         habitatId: parseInt(novoAnimal.habitatId),
-        
-        // 3. CORREÇÃO: Pegar ID do usuário do sessionStorage (onde o Login salva)
         usuarioId: parseInt(sessionStorage.getItem('usuarioId')),
-        
-        // Tratamento de data vazia
         dataNascimento: novoAnimal.dataNascimento || null
       });
 
-      alert('Animal cadastrado com sucesso!');
+      // Fecha modal de cadastro e abre o de sucesso
       setShowModal(false);
+      setShowSuccessModal(true); 
       
-      // Limpa o form para o próximo
       setNovoAnimal({ nome: '', descricao: '', especieId: '', habitatId: '', paisOrigem: '', dataNascimento: '' });
-      
       loadData();
     } catch (error) {
-      console.error(error);
-      alert('Erro ao criar animal. Verifique se você está logado.');
+      alert('Erro ao criar animal');
     }
   };
 
   return (
     <div className="container">
-      {/* Header e Filtros */}
       <div className="card" style={{ marginBottom: '30px', borderLeft: '5px solid var(--jungle-mid)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ color: 'var(--jungle-dark)' }}>🦁 Catálogo da Selva</h2>
@@ -115,7 +103,6 @@ function Animais() {
         </div>
       </div>
 
-      {/* Grid de Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {animaisFiltrados.map(animal => (
           <Link to={`/animais/${animal.id}`} key={animal.id} style={{ textDecoration: 'none' }}>
@@ -137,61 +124,42 @@ function Animais() {
       {showModal && (
         <Modal onClose={() => setShowModal(false)} title="Novo Animal">
           <form onSubmit={handleCreate}>
-            <input 
-                className="input-field" 
-                placeholder="Nome" 
-                value={novoAnimal.nome}
-                onChange={e => setNovoAnimal({...novoAnimal, nome: e.target.value})} 
-                required 
-            />
+            <input className="input-field" placeholder="Nome" value={novoAnimal.nome} onChange={e => setNovoAnimal({...novoAnimal, nome: e.target.value})} required />
             
-            {/* 4. CORREÇÃO: Selects corrigidos */}
-            <select 
-                className="input-field" 
-                value={novoAnimal.especieId} 
-                onChange={e => setNovoAnimal({...novoAnimal, especieId: e.target.value})} 
-                required
-            >
+            <select className="input-field" value={novoAnimal.especieId} onChange={e => setNovoAnimal({...novoAnimal, especieId: e.target.value})} required>
                 <option value="">Selecione a Espécie</option>
                 {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
 
-            <select 
-                className="input-field" 
-                value={novoAnimal.habitatId}
-                onChange={e => setNovoAnimal({...novoAnimal, habitatId: e.target.value})} 
-                required
-            >
+            <select className="input-field" value={novoAnimal.habitatId} onChange={e => setNovoAnimal({...novoAnimal, habitatId: e.target.value})} required>
                 <option value="">Selecione o Habitat</option>
                 {habitats.map(h => <option key={h.id} value={h.id}>{h.nome}</option>)}
             </select>
 
-            <input 
-                className="input-field" 
-                placeholder="País de Origem" 
-                value={novoAnimal.paisOrigem}
-                onChange={e => setNovoAnimal({...novoAnimal, paisOrigem: e.target.value})} 
-            />
+            <input className="input-field" placeholder="País de Origem" value={novoAnimal.paisOrigem} onChange={e => setNovoAnimal({...novoAnimal, paisOrigem: e.target.value})} />
+            <input className="input-field" type="date" value={novoAnimal.dataNascimento} onChange={e => setNovoAnimal({...novoAnimal, dataNascimento: e.target.value})} />
+            <textarea className="input-field" placeholder="Descrição" rows="3" value={novoAnimal.descricao} onChange={e => setNovoAnimal({...novoAnimal, descricao: e.target.value})} />
             
-            <input 
-                className="input-field" 
-                type="date" 
-                value={novoAnimal.dataNascimento}
-                onChange={e => setNovoAnimal({...novoAnimal, dataNascimento: e.target.value})} 
-            />
-            
-            <textarea 
-                className="input-field" 
-                placeholder="Descrição" 
-                rows="3" 
-                value={novoAnimal.descricao}
-                onChange={e => setNovoAnimal({...novoAnimal, descricao: e.target.value})} 
-            />
-            
-            <button type="submit" className="btn btn-primary" style={{width: '100%', marginTop: '10px'}}>
-                Salvar
-            </button>
+            <button type="submit" className="btn btn-primary" style={{width: '100%', marginTop: '10px'}}>Salvar</button>
           </form>
+        </Modal>
+      )}
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <Modal onClose={() => setShowSuccessModal(false)} title="Sucesso!">
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🦁</div>
+            <h3 style={{ color: 'var(--jungle-dark)' }}>Bem-vindo à selva!</h3>
+            <p>O animal foi registrado no catálogo com sucesso.</p>
+            <button 
+              className="btn btn-primary" 
+              style={{ marginTop: '20px', width: '100%' }}
+              onClick={() => setShowSuccessModal(false)}
+            >
+              Continuar
+            </button>
+          </div>
         </Modal>
       )}
     </div>

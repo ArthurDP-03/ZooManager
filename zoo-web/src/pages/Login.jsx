@@ -25,19 +25,17 @@ function Login() {
 
       if (token) {
           login(nome, token, id);
+          navigate('/animais');
       } else {
-          login(nome, id); 
+          setError('Erro: Token não recebido do servidor.');
       }
-
-      navigate('/animais');
 
     } catch (err) {
       console.error("Erro no login:", err);
-      // Mensagem de erro amigável
       if (err.response && err.response.status === 401) {
         setError('E-mail ou senha incorretos.');
       } else {
-        setError('Erro ao conectar com o servidor. Tente novamente.');
+        setError('Erro ao conectar com o servidor.');
       }
     } finally {
       setLoading(false);
@@ -47,7 +45,6 @@ function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        {/* Cabeçalho do Card */}
         <h1 style={{ color: 'var(--jungle-dark)', marginBottom: '10px', fontWeight: 'bold' }}>
           🦁 ZooManager
         </h1>
@@ -55,7 +52,6 @@ function Login() {
           Bem-vindo à selva
         </h3>
 
-        {/* Exibição de Erros */}
         {error && (
           <div style={{ 
             backgroundColor: '#ffebee', 
@@ -70,7 +66,6 @@ function Login() {
           </div>
         )}
         
-        {/* Formulário */}
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '15px' }}>
             <input 
@@ -106,7 +101,6 @@ function Login() {
           </button>
         </form>
         
-        {/* Rodapé do Card */}
         <p style={{ marginTop: '25px', fontSize: '0.9rem', color: '#666' }}>
           Ainda não é um guardião?{' '}
           <Link to="/register" style={{ color: 'var(--jungle-mid)', fontWeight: 'bold', textDecoration: 'none' }}>

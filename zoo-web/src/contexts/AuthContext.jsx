@@ -1,5 +1,4 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -9,30 +8,26 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const storedUser = sessionStorage.getItem('usuarioNome');
+    const storedToken = sessionStorage.getItem('token');
     
-    if (storedUser) {
+    if (storedUser && storedToken) {
       setUser({ nome: storedUser });
     }
     setLoading(false);
   }, []);
 
-  const login = (userName, userId) => {
+  const login = (userName, userToken, userId) => {
     sessionStorage.setItem('usuarioNome', userName);
     sessionStorage.setItem('usuarioId', userId);
+    sessionStorage.setItem('token', userToken); 
+    
     setUser({ nome: userName });
   };
 
-  const logout = async () => {
-    try {
-      await api.post('/Auth/logout');
-    } catch (error) {
-      console.error("Erro ao deslogar no servidor", error);
-    } finally {
-      sessionStorage.clear();
-      localStorage.clear();
-      setUser(null);
-      window.location.href = '/';
-    }
+  const logout = () => {
+    sessionStorage.clear();
+    setUser(null);
+    window.location.href = '/';
   };
 
   return (
