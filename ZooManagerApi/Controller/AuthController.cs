@@ -39,6 +39,29 @@ public class AuthController : ControllerBase
         if (resultado == null)
             return Unauthorized("Usuário ou senha inválidos.");
 
-        return Ok(resultado);
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,  
+            Secure = true,   
+            SameSite = SameSiteMode.Strict, 
+            Expires = DateTime.UtcNow.AddHours(2) 
+        };
+
+        Response.Cookies.Append("jwt", (string)resultado.Token, cookieOptions);
+
+        return Ok(new 
+        { 
+            Id = resultado.Id, 
+            Nome = resultado.Nome, 
+            Email = resultado.Email 
+        });
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt");
+        
+        return Ok(new { message = "Deslogado com sucesso" });
     }
 }
