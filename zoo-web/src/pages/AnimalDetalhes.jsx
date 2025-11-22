@@ -13,7 +13,7 @@ function AnimalDetalhes() {
   // --- ESTADOS DE CONTROLE DOS MODAIS ---
   const [modalStatus, setModalStatus] = useState({
     editAnimal: false,
-    careForm: false, // Serve tanto para criar quanto para editar
+    careForm: false, 
     confirmDeleteAnimal: false,
     confirmDeleteCare: false,
     success: false
