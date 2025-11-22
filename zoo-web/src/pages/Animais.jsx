@@ -14,42 +14,77 @@ function Animais() {
   
   // Modal
   const [showModal, setShowModal] = useState(false);
-  const [novoAnimal, setNovoAnimal] = useState({ nome: '', descricao: '', especieId: '', habitatId: '', paisOrigem: '', dataNascimento: '' });
+  // Nota: Iniciamos com strings vazias para os IDs
+  const [novoAnimal, setNovoAnimal] = useState({ 
+    nome: '', 
+    descricao: '', 
+    especieId: '', 
+    habitatId: '', 
+    paisOrigem: '', 
+    dataNascimento: '' 
+  });
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [resAnimais, resEspecies, resHabitats] = await Promise.all([
-      getAnimais(), getEspecies(), getHabitats()
-    ]);
-    setAnimais(resAnimais.data);
-    setEspecies(resEspecies.data);
-    setHabitats(resHabitats.data);
+    try {
+      const [resAnimais, resEspecies, resHabitats] = await Promise.all([
+        getAnimais(), 
+        getEspecies(), 
+        getHabitats()
+      ]);
+      setAnimais(resAnimais.data);
+      setEspecies(resEspecies.data);
+      setHabitats(resHabitats.data);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+    }
   };
 
   // Lógica de Filtro (Client-Side)
   const animaisFiltrados = animais.filter(animal => {
     const matchNome = animal.nome.toLowerCase().includes(filtro.nome.toLowerCase());
-    const matchEspecie = filtro.especie ? animal.especie === filtro.especie : true; // Ajuste se o DTO retornar ID ou Nome
+    // Ajuste conforme o retorno do seu DTO (se for nome ou ID)
+    const matchEspecie = filtro.especie ? animal.especie === filtro.especie : true; 
     const matchHabitat = filtro.habitat ? animal.habitat === filtro.habitat : true;
     return matchNome && matchEspecie && matchHabitat;
   });
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    
+    // 1. Validação básica
+    if (!novoAnimal.especieId || !novoAnimal.habitatId) {
+      alert("Por favor, selecione a Espécie e o Habitat.");
+      return;
+    }
+
     try {
       await createAnimal({
         ...novoAnimal,
-        usuarioId: parseInt(localStorage.getItem('usuarioId')),
+        // 2. CORREÇÃO: Converter IDs para Inteiro
+        especieId: parseInt(novoAnimal.especieId),
+        habitatId: parseInt(novoAnimal.habitatId),
+        
+        // 3. CORREÇÃO: Pegar ID do usuário do sessionStorage (onde o Login salva)
+        usuarioId: parseInt(sessionStorage.getItem('usuarioId')),
+        
+        // Tratamento de data vazia
         dataNascimento: novoAnimal.dataNascimento || null
       });
-      alert('Animal cadastrado!');
+
+      alert('Animal cadastrado com sucesso!');
       setShowModal(false);
+      
+      // Limpa o form para o próximo
+      setNovoAnimal({ nome: '', descricao: '', especieId: '', habitatId: '', paisOrigem: '', dataNascimento: '' });
+      
       loadData();
     } catch (error) {
-      alert('Erro ao criar animal');
+      console.error(error);
+      alert('Erro ao criar animal. Verifique se você está logado.');
     }
   };
 
@@ -98,27 +133,64 @@ function Animais() {
         ))}
       </div>
 
-      {/* Modal de Criação (Simples) */}
+      {/* Modal de Criação */}
       {showModal && (
         <Modal onClose={() => setShowModal(false)} title="Novo Animal">
           <form onSubmit={handleCreate}>
-            <input className="input-field" placeholder="Nome" onChange={e => setNovoAnimal({...novoAnimal, nome: e.target.value})} required />
+            <input 
+                className="input-field" 
+                placeholder="Nome" 
+                value={novoAnimal.nome}
+                onChange={e => setNovoAnimal({...novoAnimal, nome: e.target.value})} 
+                required 
+            />
             
-            <select className="input-field" onChange={e => setNovoAnimal({...novoAnimal, especieId: e.target.value})} required>
+            {/* 4. CORREÇÃO: Selects corrigidos */}
+            <select 
+                className="input-field" 
+                value={novoAnimal.especieId} 
+                onChange={e => setNovoAnimal({...novoAnimal, especieId: e.target.value})} 
+                required
+            >
                 <option value="">Selecione a Espécie</option>
                 {especies.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
 
-            <select className="input-field" onChange={e => setNovoAnimal({...novoAnimal, habitatId: e.target.value})} required>
+            <select 
+                className="input-field" 
+                value={novoAnimal.habitatId}
+                onChange={e => setNovoAnimal({...novoAnimal, habitatId: e.target.value})} 
+                required
+            >
                 <option value="">Selecione o Habitat</option>
                 {habitats.map(h => <option key={h.id} value={h.id}>{h.nome}</option>)}
             </select>
 
-            <input className="input-field" placeholder="País de Origem" onChange={e => setNovoAnimal({...novoAnimal, paisOrigem: e.target.value})} />
-            <input className="input-field" type="date" onChange={e => setNovoAnimal({...novoAnimal, dataNascimento: e.target.value})} />
-            <textarea className="input-field" placeholder="Descrição" rows="3" onChange={e => setNovoAnimal({...novoAnimal, descricao: e.target.value})} />
+            <input 
+                className="input-field" 
+                placeholder="País de Origem" 
+                value={novoAnimal.paisOrigem}
+                onChange={e => setNovoAnimal({...novoAnimal, paisOrigem: e.target.value})} 
+            />
             
-            <button type="submit" className="btn btn-primary" style={{width: '100%', marginTop: '10px'}}>Salvar</button>
+            <input 
+                className="input-field" 
+                type="date" 
+                value={novoAnimal.dataNascimento}
+                onChange={e => setNovoAnimal({...novoAnimal, dataNascimento: e.target.value})} 
+            />
+            
+            <textarea 
+                className="input-field" 
+                placeholder="Descrição" 
+                rows="3" 
+                value={novoAnimal.descricao}
+                onChange={e => setNovoAnimal({...novoAnimal, descricao: e.target.value})} 
+            />
+            
+            <button type="submit" className="btn btn-primary" style={{width: '100%', marginTop: '10px'}}>
+                Salvar
+            </button>
           </form>
         </Modal>
       )}
